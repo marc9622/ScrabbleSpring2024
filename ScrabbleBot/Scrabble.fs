@@ -311,12 +311,12 @@ module Scrabble =
 
     let playGame cstream pieces (st: State.state) =
         let rec aux (st: State.state) =
-            Print.printHand pieces st.hand
+            // Print.printHand pieces st.hand
             
             // let firstMove = NextMoveFinder.NextMove pieces st
             // let shouldGoRight, shouldGoDown, lastTile, nextMove = NextMoveFinder.StaircaseNextMove pieces st
 
-            //ScrabbleUtil.DebugPrint.debugPrintCol (sprintf "st.curPlayer %A = st.playerNum %A\n" st.curPlayer st.playerNum) System.ConsoleColor.Black
+            ScrabbleUtil.DebugPrint.debugPrintCol (sprintf "st.curPlayer %A = st.playerNum %A\n" st.curPlayer st.playerNum) System.ConsoleColor.Black
             if st.curPlayer = st.playerNum then
                 // remove the force print when you move on from manual input (or when you have learnt the format)
                 // forcePrint
@@ -332,9 +332,7 @@ module Scrabble =
 
                 debugPrint (sprintf "Player %d <- Server:\n%A\n" st.curPlayer move) // keep the debug lines. They are useful.
 
-                let mes = recv cstream
-
-                match mes with
+                match recv cstream with
                 | RCM(CMPlaySuccess(move: (coord * (uint32 * (char * int))) list,
                                     points,
                                     newPieces: (uint32 * uint32) list)) ->
@@ -381,9 +379,12 @@ module Scrabble =
                         { st with
                             curPlayer = State.nextPlayer st }
             else
+                ScrabbleUtil.DebugPrint.debugPrintCol (sprintf "Player %d is not this player\n" st.curPlayer) System.ConsoleColor.Black
+                
                 match recv cstream with
                 | RCM(CMPlayed(pid, move: (coord * (uint32 * (char * int))) list, points)) ->
                     ScrabbleUtil.DebugPrint.debugPrint (sprintf "Player %d played %A for %d points\n" pid move points)
+                    ScrabbleUtil.DebugPrint.flush ""
 
                     aux
                         { st with
@@ -399,19 +400,22 @@ module Scrabble =
                             firstPlayerTurn = false }
                 | RCM(CMPlayFailed(pid, ms)) ->
                     ScrabbleUtil.DebugPrint.debugPrint (sprintf "Player %d failed to play %A\n" pid ms)
+                    ScrabbleUtil.DebugPrint.flush ""
 
                     aux
                         { st with
-                            curPlayer = (st.curPlayer + 1u) % st.playerCount }
+                            curPlayer = State.nextPlayer st }
                 | RCM(CMGameOver _) -> ()
                 | RCM a ->
                     ScrabbleUtil.DebugPrint.debugPrint (sprintf "Player %d <- Server:\n%A\n" st.playerNum a)
+                    ScrabbleUtil.DebugPrint.flush ""
 
                     aux
                         { st with
                             curPlayer = State.nextPlayer st }
                 | RGPE err ->
                     ScrabbleUtil.DebugPrint.debugPrint (sprintf "Player %d <- Server:\n%A\n" st.playerNum err)
+                    ScrabbleUtil.DebugPrint.flush ""
 
                     aux
                         { st with
